@@ -1,11 +1,8 @@
 {
   "name": "ghlatest",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "api/main.js",
   "repository": "git@github.com:JuanM04/ghlatest.git",
   "author": "JuanM04 <me@juanm04.com>",
-  "license": "MIT",
-  "dependencies": {
-    "node-fetch": "^2.6.1"
-  }
+  "license": "MIT"
 }

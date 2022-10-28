@@ -1,49 +1,65 @@
-const fetch = require("node-fetch");
+export const config = {
+  runtime: "experimental-edge",
+};
 
-const welcomeMessage = `ghlatest
+/**
+ * @param {Request} req
+ * @returns {Promise<Response>}
+ */
+async function handler(req) {
+  const headers = new Headers({
+    "Access-Control-Allow-Origin": "*",
+    "Cache-Control": "public, no-transform, immutable, max-age=3600",
+    "Content-Type": "text/plain",
+  });
+
+  const url = new URL(req.url).pathname;
+
+  if (url === "/" || url === "") {
+    return new Response(
+      `ghlatest
 Returns the latest version of a repo.
 
 USAGE:
 
 /user/repo --> v1.0.0
 /user/repo/path/to/some/file --> https://raw.githubusercontent.com/user/repo/v1.0.0/install.sh
-`;
-
-module.exports = async ({ url }, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader(
-    "Cache-Control",
-    "public, no-transform, immutable, max-age=3600"
-  );
-
-  if (url === "/" || url === "") {
-    res.setHeader("Content-Type", "text/plain");
-    res.send(welcomeMessage);
-    return;
+    `,
+      { headers }
+    );
   }
 
   if (!/^\/[a-zA-Z0-9]+(-[a-zA-Z0-9]+)*\/[a-zA-Z0-9_-]+/.test(url)) {
-    res.status(400).send("Invalid GitHub repo");
-    return;
+    return new Response("Invalid GitHub repo", { status: 400, headers });
   }
 
   try {
-    const [user, repo, path = null] = url.substr(1).split("/", 3);
+    const [user, repo, path = null] = url.slice(1).split("/", 3);
 
     const body = await fetch(
       `https://api.github.com/repos/${user}/${repo}/releases/latest`
     ).then((res) => res.json());
 
-    if (!body.tag_name) throw new Error();
+    if (!body.tag_name) {
+      return new Response(
+        "The repo doesn't exist, or it doesn't have any release",
+        { status: 404, headers }
+      );
+    }
 
     if (path) {
-      res.redirect(
+      headers.set(
+        "Location",
         `https://raw.githubusercontent.com/${user}/${repo}/${body.tag_name}/${path}`
       );
+      return new Response(null, { status: 302, headers });
     } else {
-      res.send(body.tag_name);
+      return new Response(body.tag_name, { headers });
     }
   } catch (error) {
-    res.status(500).send("Error");
+    console.error(error);
+    return new Response("Unexpected Error", { status: 500, headers });
   }
-};
+}
+
+export default handler;
